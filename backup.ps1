@@ -10,7 +10,6 @@ Function Get-ChildItemRecursive {
             Write-Host "Processing directory: $($item.Fullname)" -BackgroundColor "red"
             Get-ChildItemRecursive $($item.FullName)
         } else {
-    
             Write-Host "Processing file $($item.FullName)" -BackgroundColor "yellow"
         }
     }
@@ -18,28 +17,47 @@ Function Get-ChildItemRecursive {
 
 Function Compare_Items {
     param (
-        [string]$SourceItem,
-        [string]$TargetItem
+        [string]$SourceItem_path,
+        [string]$TargetItem_path
     )
-    if ($SourceItem.LastWriteTimeUtc -ne $TargetItem.LastWriteTimeUtc -or
-        $SourceItem.Length -ne $TargetItem.Length) {
-        Write-Host "File $($SourceItem.FullName) differs from $($TargetItem.FullName)" -BackgroundColor "red"
+    $SourceItem = Get-Item -Path $SourceItem_path
+    $TargetItem = Get-Item -Path $TargetItem_path
+    if (($SourceItem.LastWriteTimeUtc -ne $TargetItem.LastWriteTimeUtc) -or
+        ($SourceItem.Length -ne $TargetItem.Length)) {
+        Write-Host "File $($SourceItem.FullName) differs from $($TargetItem.FullName)`nFile $($SourceItem.FullName) is modified" -BackgroundColor "red"
         return $false
-
     }
+    Write-Host "File $($SourceItem.FullName) is identical to $($TargetItem.FullName)" -BackgroundColor "green"
+    return $true
 }
-Function Create_Folder_if_Not_Exist {
+Function Create_if_Not_Exist {
     param (
-        [string]$Path
+        [string]$SourceItem_Path,
+        [string]$TargetItem_Path
     )
-    if (-not (Test-Path $Path)) {
-        Write-Host "Creating folder: $Path" -BackgroundColor "green"
-        New-Item -ItemType Directory -Path $Path | Out-Null
+    $item = Get-Item $SourceItem_Path
+    if ($item.PSIsContainer) {
+        $ItemType = "Directory"
     } else {
-        Write-Host "Folder already exists: $Path" -BackgroundColor "blue"
+        $ItemType = "File"
+    }
+    if (-not (Test-Path $TargetItem_Path)) {
+        Write-Host "Creating $($ItemType): $TargetItem_Path" -BackgroundColor "green"
+        New-Item -ItemType $ItemType -Path $TargetItem_Path 
+    } else {
+        Write-Host "$ItemType already exists: $TargetItem_Path" -BackgroundColor "blue"
     }
 }
 
 #Get-ChildItemRecursive $source_path
-Create_Folder_if_Not_Exist $target_path
-Get-ChildItemRecursive $target_path
+#$source_path= ".\backup.ps1"
+#$target_path= "F:\backup_test\backup.ps1"
+#Create_if_Not_Exist $source_path $target_path
+#Get-ChildItemRecursive $target_path
+
+<#
+$source_path = "F:\coding\PS_backup\backup.ps1"
+$target_path = "F:\backup_test\backup.ps1"
+Copy-Item -Path $source_path -Destination $target_path -Force
+Compare_Items $target_path $source_path
+#>
