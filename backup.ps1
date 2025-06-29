@@ -61,3 +61,21 @@ $target_path = "F:\backup_test\backup.ps1"
 Copy-Item -Path $source_path -Destination $target_path -Force
 Compare_Items $target_path $source_path
 #>
+
+$source="F:"
+$file= "F:\coding\test\object\objectuser.py"
+# powershell 6+ and above
+#$PSVersionTable.PSVersion
+#$relativePath = [System.IO.Path]::GetRelativePath($source, $file)
+#Write-Host $relativePath
+Function Get_RelativePath {
+    param (
+        $sourceRoot,
+        $sourceFile
+    )
+    $relativePath = $sourceFile.Substring($sourceRoot.Length).TrimStart('\')
+    #Write-Host $relativePath
+    return $relativePath
+}
+
+Get_RelativePath $source $file
