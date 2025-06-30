@@ -40,15 +40,18 @@ Function Backup-WriteIn {
         $basename=$SourceItem.Name
         $TargetItem_path = Join-Path $TargetRootPath $basename
         if (Test-Path $SourceItem -PathType Container) {
-            #$NewSourceItem = Join-Path 
-            Write-Host "Processing directory: $basename " -BackgroundColor "red"
-            Create_if_Not_Exist $SourceItem $TargetItem_path
+            Write-Host "Processing directory: $basename" -BackgroundColor "red"
+            $created = Create_if_Not_Exist $SourceItem $TargetItem_path
+            Write-Host $changed
             Backup-WriteIn $SourceItem $TargetItem_path
         } else {
             Write-Host "Processing file: $basename" -BackgroundColor "yellow"
             $copied = If_File_not_Exist_Copy $SourceItem $TargetItem_path
-            if (-not $flag) {
-                Compare_Items $SourceItem $TargetItem_path
+            if (-not $copied) {
+                $changed = Compare_Items $SourceItem $TargetItem_path
+                if ($changed) {
+                    Copy-Item $SourceItem $TargetItem_path
+                }
             }
         }
     }
@@ -75,11 +78,10 @@ Function Compare_Items {
     $TargetItem = Get-Item -Path $TargetItem_path
     if (($SourceItem.LastWriteTimeUtc -ne $TargetItem.LastWriteTimeUtc) -or
         ($SourceItem.Length -ne $TargetItem.Length)) {
-        Write-Host "Item $($SourceItem.FullName) differs from $($TargetItem.FullName)`nFile $($SourceItem.FullName) is modified" -BackgroundColor "red"
-        Copy-Item $SourceItem $TargetItem
+        Write-Host "File $($SourceItem.Name) is modified" -BackgroundColor "red"
         return $true
     }
-    Write-Host "Item $($SourceItem.FullName) is identical to $($TargetItem.FullName)" -BackgroundColor "green"
+    #Write-Host "Item $($SourceItem.FullName) is identical to $($TargetItem.FullName)" -BackgroundColor "green"
     return $false
 }
 Function Create_if_Not_Exist {
@@ -96,8 +98,10 @@ Function Create_if_Not_Exist {
     if (-not (Test-Path $TargetItem_Path)) {
         Write-Host "Creating $($ItemType): $TargetItem_Path" -BackgroundColor "green"
         New-Item -ItemType $ItemType -Path $TargetItem_Path 
+        return $true
     } else {
         Write-Host "$ItemType already exists: $TargetItem_Path" -BackgroundColor "blue"
+        return $false
     }
 }
 
