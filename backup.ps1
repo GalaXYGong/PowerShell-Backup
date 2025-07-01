@@ -51,7 +51,7 @@ Function Backup-WriteIn {
                 if ($changed) {
                     # here we need real_target_path
                     Move-Modifed $real_target_path $TargetItem_path $modified_root                 
-                    Copy-Item $SourceItem $TargetItem_path
+                    # Copy-Item $SourceItem $TargetItem_path
                 }
             }
         }
@@ -117,8 +117,11 @@ Function Move-Modifed {
         New-Item -ItemType Directory -Path $ModifiedRoot
     }
     $ParentRelativePath = Get-ParentRelativePath $real_target_path $TargetItem_path
-    $ModifiedItem_path = Make_ModifiedItem_Dir_If_Not_Exist $ModifiedRoot $ParentRelativePath
-    Write-Host "Moving modified item from $TargetItem_path, to $ModifiedItem_path" -BackgroundColor "magenta"
+    $ModifiedParentpath = Make_ModifiedItem_Dir_If_Not_Exist $ModifiedRoot $ParentRelativePath
+    Write-Host "Moving modified item from $TargetItem_path, to $ModifiedParentpath" -BackgroundColor "magenta"
+    $ArchiveFileName = ArchiveFileName $TargetItem_path
+    Write-Host "Archive file name: $ArchiveFileName"
+    $ModifiedItem_path = Join-Path $ModifiedParentpath $ArchiveFileName
     Copy-Item -Path $TargetItem_path -Destination $ModifiedItem_path -Force
 }
 Function Get-ParentRelativePath {
@@ -185,7 +188,16 @@ Function Get_TargetItem_Path {
     Write-Host $TargetItem_Path
 }
 
-
+Function ArchiveFileName {
+    param (
+        [string]$Item
+    )
+    $ArchiveTime = Get-ArchiveTime $Item
+    $FileName = Get-Item $Item | Select-Object -ExpandProperty Name
+    $ArchiveFileName = "$($ArchiveTime)_$($FileName)"
+    Write-Host "Archive file name: $ArchiveFileName" -BackgroundColor "cyan"
+    return $ArchiveFileName
+}
 
 $source_path= "F:\backup_source"
 $target_path= "F:\backup_test"
