@@ -145,6 +145,26 @@ Function Make_ModifiedItem_Dir_If_Not_Exist {
         New-Item -ItemType Directory -Path $ModifiedItem_Dir | Out-Null
     }
 }
+Function Get-ArchiveTime {
+    param (
+        [string]$TargetItem_path
+    )
+    $TargetItem = Get-Item -Path $TargetItem_path
+    $ArchiveTime = $TargetItem.LastWriteTimeUtc.ToString("yyyyMMdd_HHmmss")
+    return $ArchiveTime
+}
+Function Create-TodayArchiveDir {
+    param (
+        [string]$ModifiedRoot
+    )
+    $today = Get-Date -Format "yyyy_MM_dd"
+    $ArchiveDir = Join-Path $ModifiedRoot $today
+    if (-not (Test-Path $ArchiveDir)) {
+        Write-Host "Creating archive directory for today: $ArchiveDir" -BackgroundColor "green"
+        New-Item -ItemType Directory -Path $ArchiveDir | Out-Null
+    }
+    return $ArchiveDir
+}
 <#
 $source_path = "F:\coding\PS_backup\backup.ps1"
 $target_path = "F:\backup_test\backup.ps1"
