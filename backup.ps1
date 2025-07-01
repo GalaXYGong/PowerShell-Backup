@@ -51,7 +51,7 @@ Function Backup-WriteIn {
                 if ($changed) {
                     # here we need real_target_path
                     Move-Modifed $real_target_path $TargetItem_path $modified_root                 
-                    #Copy-Item $SourceItem $TargetItem_path
+                    Copy-Item $SourceItem $TargetItem_path
                 }
             }
         }
@@ -112,15 +112,13 @@ Function Move-Modifed {
         [string]$ModifiedRoot
     )
     $relativePath = Get_RelativePath $TargetRoot $TargetItem_path
-    #Write-Host "Relative path: $relativePath"
-    $ModifiedItem_path = Join-Path $ModifiedRoot $relativePath
-    Write-Host "Moving modified item from $TargetItem_path, to $ModifiedItem_path" -BackgroundColor "magenta"
     if (-not (Test-Path $ModifiedRoot)) {
         Write-Host "Creating modified root directory: $ModifiedRoot" -BackgroundColor "green"
         New-Item -ItemType Directory -Path $ModifiedRoot
     }
     $ParentRelativePath = Get-ParentRelativePath $real_target_path $TargetItem_path
-    Make_ModifiedItem_Dir_If_Not_Exist $ModifiedRoot $ParentRelativePath
+    $ModifiedItem_path = Make_ModifiedItem_Dir_If_Not_Exist $ModifiedRoot $ParentRelativePath
+    Write-Host "Moving modified item from $TargetItem_path, to $ModifiedItem_path" -BackgroundColor "magenta"
     Copy-Item -Path $TargetItem_path -Destination $ModifiedItem_path -Force
 }
 Function Get-ParentRelativePath {
@@ -139,11 +137,13 @@ Function Make_ModifiedItem_Dir_If_Not_Exist {
         [string]$ModifiedRoot,
         [string]$ParentRelativePath
     )
-    $ModifiedItem_Dir = Join-Path $ModifiedRoot $ParentRelativePath
+    $ArchiveDir = Create-TodayArchiveDir $ModifiedRoot
+    $ModifiedItem_Dir = Join-Path $ArchiveDir $ParentRelativePath
     if (-not (Test-Path $ModifiedItem_Dir)) {
         Write-Host "Creating modified item directory: $ModifiedItem_Dir" -BackgroundColor "green"
         New-Item -ItemType Directory -Path $ModifiedItem_Dir | Out-Null
     }
+    return $ModifiedItem_Dir
 }
 Function Get-ArchiveTime {
     param (
@@ -165,17 +165,7 @@ Function Create-TodayArchiveDir {
     }
     return $ArchiveDir
 }
-<#
-$source_path = "F:\coding\PS_backup\backup.ps1"
-$target_path = "F:\backup_test\backup.ps1"
-Copy-Item -Path $source_path -Destination $target_path -Force
-Compare_Items $target_path $source_path
-#>
 
-# powershell 6+ and above
-#$PSVersionTable.PSVersion
-#$relativePath = [System.IO.Path]::GetRelativePath($source, $file)
-#Write-Host $relativePath
 Function Get_RelativePath {
     param (
         $sourceRoot,
@@ -195,11 +185,6 @@ Function Get_TargetItem_Path {
     Write-Host $TargetItem_Path
 }
 
-# $sourceRoot="F:\"
-# $sourceFile="F:\coding\PS_backup\backup.ps1"
-# $target_path="F:\backup_test"
-# $relative_Path = Get_RelativePath $sourceRoot $sourceFile
-# $TargetItem_Path = Get_TargetItem_Path $target_path $relative_Path
 
 
 $source_path= "F:\backup_source"
