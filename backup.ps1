@@ -42,7 +42,6 @@ Function Backup-WriteIn {
         if (Test-Path $SourceItem -PathType Container) {
             Write-Host "Processing directory: $basename" -BackgroundColor "red"
             $created = Create_if_Not_Exist $SourceItem $TargetItem_path
-            Write-Host $changed
             Backup-WriteIn $SourceItem $TargetItem_path
         } else {
             Write-Host "Processing file: $basename" -BackgroundColor "yellow"
@@ -50,7 +49,9 @@ Function Backup-WriteIn {
             if (-not $copied) {
                 $changed = Compare_Items $SourceItem $TargetItem_path
                 if ($changed) {
-                    Copy-Item $SourceItem $TargetItem_path
+                    # here we need real_target_path
+                    Move-Modifed $real_target_path $TargetItem_path $modified_root                 
+                    #Copy-Item $SourceItem $TargetItem_path
                 }
             }
         }
@@ -104,8 +105,46 @@ Function Create_if_Not_Exist {
         return $false
     }
 }
+Function Move-Modifed {
+    param (
+        [string]$TargetRoot,
+        [string]$TargetItem_path,
+        [string]$ModifiedRoot
+    )
+    $relativePath = Get_RelativePath $TargetRoot $TargetItem_path
+    #Write-Host "Relative path: $relativePath"
+    $ModifiedItem_path = Join-Path $ModifiedRoot $relativePath
+    Write-Host "Moving modified item from $TargetItem_path, to $ModifiedItem_path" -BackgroundColor "magenta"
+    if (-not (Test-Path $ModifiedRoot)) {
+        Write-Host "Creating modified root directory: $ModifiedRoot" -BackgroundColor "green"
+        New-Item -ItemType Directory -Path $ModifiedRoot
+    }
+    $ParentRelativePath = Get-ParentRelativePath $real_target_path $TargetItem_path
+    Make_ModifiedItem_Dir_If_Not_Exist $ModifiedRoot $ParentRelativePath
+    Copy-Item -Path $TargetItem_path -Destination $ModifiedItem_path -Force
+}
+Function Get-ParentRelativePath {
+    param (
+        [string]$Root_path, #should be the real root path of the source directory
+        [string]$File_path
+    )
+    $File= Get-Item $File_path
+    $Parent=$File.Directory
+    $ParentRelativePath = Get_RelativePath $Root_path $Parent.FullName
+    return $ParentRelativePath
+}
 
-
+Function Make_ModifiedItem_Dir_If_Not_Exist {
+    param (
+        [string]$ModifiedRoot,
+        [string]$ParentRelativePath
+    )
+    $ModifiedItem_Dir = Join-Path $ModifiedRoot $ParentRelativePath
+    if (-not (Test-Path $ModifiedItem_Dir)) {
+        Write-Host "Creating modified item directory: $ModifiedItem_Dir" -BackgroundColor "green"
+        New-Item -ItemType Directory -Path $ModifiedItem_Dir | Out-Null
+    }
+}
 <#
 $source_path = "F:\coding\PS_backup\backup.ps1"
 $target_path = "F:\backup_test\backup.ps1"
@@ -142,7 +181,11 @@ Function Get_TargetItem_Path {
 # $relative_Path = Get_RelativePath $sourceRoot $sourceFile
 # $TargetItem_Path = Get_TargetItem_Path $target_path $relative_Path
 
+
 $source_path= "F:\backup_source"
 $target_path= "F:\backup_test"
+$modified_root= "F:\backup_modified"
+$real_source_path= "F:\backup_source"
+$real_target_path= "F:\backup_test"
 Backup-WriteIn $source_path $target_path
 # Get-ChildItemRecursive $source_path
