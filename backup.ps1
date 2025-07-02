@@ -1,5 +1,9 @@
-# $source_path= "F:\coding\application"
-# $target_path= "F:\backup_test"
+#TODO:
+# 1. Delete_if_Not_Exist needs to be fixed, it should move items to Deleted_root and create archive in Deleted_root
+# 2. Create archive file name with timestamp
+# 3. Add logging to the script
+# 4. Add performance counters to measure the time taken for each operation
+# 5. Automate the folder creation for modified items and deleted items
 
 # Function Get-ChildItemRecursive {
 #     param (
@@ -23,10 +27,10 @@ Function Get-ChildItemRecursive {
     $under_directory = Get-ChildItem -Path $Path -Force
     foreach ($item in $under_directory) {
         if (Test-Path $item -PathType Container) {
-            Write-Host "Processing directory: $($item.Name)" -BackgroundColor "red"
+            #Write-Host "Processing directory: $($item.Name)" -BackgroundColor "red"
             Get-ChildItemRecursive $item
         } else {
-            Write-Host "Processing file $($item.Name)" -BackgroundColor "yellow"
+            #Write-Host "Processing file $($item.Name)" -BackgroundColor "yellow"
         }
     }
 }
@@ -40,21 +44,43 @@ Function Backup-WriteIn {
         $basename=$SourceItem.Name
         $TargetItem_path = Join-Path $TargetRootPath $basename
         if (Test-Path $SourceItem -PathType Container) {
-            Write-Host "Processing directory: $basename" -BackgroundColor "red"
+            #Write-Host "Processing directory: $basename" -BackgroundColor "red"
             $created = Create_if_Not_Exist $SourceItem $TargetItem_path
             Backup-WriteIn $SourceItem $TargetItem_path
         } else {
-            Write-Host "Processing file: $basename" -BackgroundColor "yellow"
+            #Write-Host "Processing file: $basename" -BackgroundColor "yellow"
             $copied = If_File_not_Exist_Copy $SourceItem $TargetItem_path
             if (-not $copied) {
                 $changed = Compare_Items $SourceItem $TargetItem_path
                 if ($changed) {
                     # here we need real_target_path
                     Move-Modifed $real_target_path $TargetItem_path $modified_root                 
-                    # Copy-Item $SourceItem $TargetItem_path
+                    Copy-Item $SourceItem $TargetItem_path
                 }
             }
         }
+    }
+}
+
+Function Backup-Delete {
+    param (
+        $SourceRootPath,
+        $TargetRootPath,
+        $DeleteRootPath
+    )
+    $under_TargetRoot_directory = Get-ChildItem -Path $TargetRootPath -Force
+    if (-not (Test-Path $DeleteRootPath)) {
+        Write-Host "Creating delete root directory: $DeleteRootPath" -BackgroundColor "green"
+        New-Item -ItemType Directory -Path $DeleteRootPath | Out-Null
+    }
+    foreach ($TargetItem in $under_TargetRoot_directory) {
+        $basename=$TargetItem.Name
+        $SourceItem_path = Join-Path $SourceRootPath $basename
+        $Deleted = Delete_if_Not_Exist $TargetItem $SourceItem_path $DeleteRootPath
+        if ((-not $Deleted) -and (Test-Path $TargetItem -PathType Container)) {
+            #Write-Host "Processing directory: $basename" -BackgroundColor "red"
+            Backup-Delete $SourceItem_path $TargetItem.FullName $DeleteRootPath
+        } 
     }
 }
 Function If_File_not_Exist_Copy {
@@ -101,7 +127,7 @@ Function Create_if_Not_Exist {
         New-Item -ItemType $ItemType -Path $TargetItem_Path 
         return $true
     } else {
-        Write-Host "$ItemType already exists: $TargetItem_Path" -BackgroundColor "blue"
+        #Write-Host "$ItemType already exists: $TargetItem_Path" -BackgroundColor "blue"
         return $false
     }
 }
@@ -118,9 +144,28 @@ Function Move-Modifed {
     }
     $ParentRelativePath = Get-ParentRelativePath $real_target_path $TargetItem_path
     $ModifiedParentpath = Make_ModifiedItem_Dir_If_Not_Exist $ModifiedRoot $ParentRelativePath
-    Write-Host "Moving modified item from $TargetItem_path, to $ModifiedParentpath" -BackgroundColor "magenta"
+    #Write-Host "Moving modified item from $TargetItem_path, to $ModifiedParentpath" -BackgroundColor "magenta"
     $ArchiveFileName = ArchiveFileName $TargetItem_path
-    Write-Host "Archive file name: $ArchiveFileName"
+    $ModifiedItem_path = Join-Path $ModifiedParentpath $ArchiveFileName
+    Copy-Item -Path $TargetItem_path -Destination $ModifiedItem_path -Force
+}
+
+Function Move-Deleted {
+    param (
+        [string]$TargetRoot,
+        [string]$TargetItem_path,
+        [string]$DeleteRoot
+    )
+    $relativePath = Get_RelativePath $TargetRoot $TargetItem_path
+    if (-not (Test-Path $DeleteRoot)) {
+        Write-Host "Creating delete root directory: $DeleteRoot" -BackgroundColor "green"
+        New-Item -ItemType Directory -Path $DeleteRoot
+    }
+    #Write-Host "DeleteRoot: $DeleteRoot" -BackgroundColor "green"
+    $ParentRelativePath = Get-ParentRelativePath $real_target_path $TargetItem_path
+    $ModifiedParentpath = Make_ModifiedItem_Dir_If_Not_Exist $ModifiedRoot $ParentRelativePath
+    Write-Host "Moving modified item from $TargetItem_path to $ModifiedParentpath" -BackgroundColor "magenta"
+    $ArchiveFileName = ArchiveFileName $TargetItem_path
     $ModifiedItem_path = Join-Path $ModifiedParentpath $ArchiveFileName
     Copy-Item -Path $TargetItem_path -Destination $ModifiedItem_path -Force
 }
@@ -198,11 +243,36 @@ Function ArchiveFileName {
     Write-Host "Archive file name: $ArchiveFileName" -BackgroundColor "cyan"
     return $ArchiveFileName
 }
+# TODO move items to Deleted_root and create archive in Deleted_root
+# TODO create archive file name with timestamp
+Function Delete_if_Not_Exist {
+    param (
+        $TargetItem,
+        $SourceItem_path,
+        $delete_root
+    )
+    $relativePath = Get_RelativePath $real_target_path $TargetItem.FullName
+    $TargetItem_path = Join-Path $real_target_path $relativePath
+    #Write-Host "delete-root: $delete_root" -BackgroundColor "green"
+    if (-not (Test-Path $SourceItem_path)) {
+        Write-Host "Deleting item: $($TargetItem.FullName) because it does not exist in source" -BackgroundColor "red"
+        Move-Item -Path $TargetItem.FullName -Destination $delete_root -Force
+        return $true
+    }
+    return $false
+}
+# Load configuration from config.json
+# $configPath = "F:\coding\PS_backup\config.json"
+$configPath = Join-Path -Path $PSScriptRoot -ChildPath "config.json"
+$config = Get-Content $configPath | ConvertFrom-Json
 
-$source_path= "F:\backup_source"
-$target_path= "F:\backup_test"
-$modified_root= "F:\backup_modified"
-$real_source_path= "F:\backup_source"
-$real_target_path= "F:\backup_test"
+$source_path = $config.source_path
+$target_path = $config.target_path
+$modified_root = $config.modified_root
+$real_source_path = $config.real_source_path
+$real_target_path = $config.real_target_path
+$deleted_root = $config.deleted_root
+
+
 Backup-WriteIn $source_path $target_path
-# Get-ChildItemRecursive $source_path
+Backup-Delete $source_path $target_path $deleted_root
