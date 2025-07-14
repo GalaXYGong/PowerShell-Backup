@@ -22,7 +22,7 @@ Function Backup-WriteIn {
         $SourceRootPath,
         $TargetRootPath
     )
-    $under_sourceRoot_directory = Get-ChildItem -Path $SourceRootPath -Force
+    $under_sourceRoot_directory = Get-ChildItem -Path $SourceRootPath -Force -Exclude '.git', 'node_modules', 'venv', 'env', 'dist', 'build', '.gitignore'
     foreach ($SourceItem in $under_sourceRoot_directory) {
         $basename=$SourceItem.Name
         $TargetItem_path = Join-Path $TargetRootPath $basename
@@ -61,7 +61,7 @@ Function Backup-Delete {
         $TargetRootPath,
         $DeleteRootPath
     )
-    $under_TargetRoot_directory = Get-ChildItem -Path $TargetRootPath -Force
+    $under_TargetRoot_directory = Get-ChildItem -Path $TargetRootPath -Force -Exclude '.git', 'node_modules', 'venv', 'env', 'dist', 'build', '.gitignore'
     # Check if the delete root directory exists, if not, create it
     if (-not (Test-Path $DeleteRootPath)) {
         Write-Host "Creating delete root directory: $DeleteRootPath" -ForegroundColor "green"
@@ -140,7 +140,7 @@ Function Move-Modified {
         [string]$ModifiedRoot
     )
     # Get the relative path of the item in the target directory
-    $relativePath = Get_RelativePath $TargetRoot $TargetItem_path
+    #$relativePath = Get_RelativePath $TargetRoot $TargetItem_path
     if (-not (Test-Path $ModifiedRoot)) {
         Write-Host "Creating modified root directory: $ModifiedRoot" -ForegroundColor "green"
         # and create the modified item directory if it does not exist.
@@ -168,7 +168,7 @@ Function Move-Deleted {
         [string]$TargetItem_path,
         [string]$DeleteRoot
     )
-    $relativePath = Get_RelativePath $TargetRoot $TargetItem_path
+    #$relativePath = Get_RelativePath $TargetRoot $TargetItem_path
     if (-not (Test-Path $DeleteRoot)) {
         Write-Host "Creating delete root directory: $DeleteRoot" -ForegroundColor "green"
         New-Item -ItemType Directory -Path $DeleteRoot
@@ -290,25 +290,25 @@ $config = Get-Content $configPath | ConvertFrom-Json
 
 $source_path = $config.source_path
 $target_path = $config.target_path
+if (-not (Test-Path $target_path)) {
+    Write-Host "No target path found: $target_path" -BackgroundColor "red"
+    exit
+} else {
+    Write-Host "Real target path already exists: $target_path" -ForegroundColor "blue"
+}
 $deleted_root = Join-Path -Path $target_path -ChildPath "deleted"
 $modified_root = Join-Path -Path $target_path -ChildPath "modified"
-$real_source_path = $source_path 
 $real_target_path = Join-Path -Path $target_path -ChildPath "backup"
 $target_path = Join-Path -Path $target_path -ChildPath "backup"
 
-Write-Host "Source Path: $source_path" -ForegroundColor "cyan"
-Write-Host "Target Path: $target_path" -ForegroundColor "cyan"
-Write-Host "Deleted Root: $deleted_root" -ForegroundColor "cyan"
-Write-Host "Modified Root: $modified_root" -ForegroundColor "cyan"
-Write-Host "Real Source Path: $real_source_path" -ForegroundColor "cyan"
-Write-Host "Real Target Path: $real_target_path" -ForegroundColor "cyan"
+# Write-Host "Source Path: $source_path" -ForegroundColor "cyan"
+# Write-Host "Target Path: $target_path" -ForegroundColor "cyan"
+# Write-Host "Deleted Root: $deleted_root" -ForegroundColor "cyan"
+# Write-Host "Modified Root: $modified_root" -ForegroundColor "cyan"
+# Write-Host "Real Source Path: $real_source_path" -ForegroundColor "cyan"
+# Write-Host "Real Target Path: $real_target_path" -ForegroundColor "cyan"
 
-if (-not (Test-Path $real_target_path)) {
-    Write-Host "No target path found: $real_target_path" -BackgroundColor "red"
-    exit
-} else {
-    Write-Host "Real target path already exists: $real_target_path" -ForegroundColor "blue"
-}
+
 $startTime_writeIn = Get-Date
 Backup-WriteIn $source_path $target_path
 $endTime_writeIn = Get-Date
