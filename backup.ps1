@@ -296,8 +296,19 @@ $real_source_path = $source_path
 $real_target_path = Join-Path -Path $target_path -ChildPath "backup"
 $target_path = Join-Path -Path $target_path -ChildPath "backup"
 
+Write-Host "Source Path: $source_path" -ForegroundColor "cyan"
+Write-Host "Target Path: $target_path" -ForegroundColor "cyan"
+Write-Host "Deleted Root: $deleted_root" -ForegroundColor "cyan"
+Write-Host "Modified Root: $modified_root" -ForegroundColor "cyan"
+Write-Host "Real Source Path: $real_source_path" -ForegroundColor "cyan"
+Write-Host "Real Target Path: $real_target_path" -ForegroundColor "cyan"
 
-
+if (-not (Test-Path $real_target_path)) {
+    Write-Host "No target path found: $real_target_path" -BackgroundColor "red"
+    exit
+} else {
+    Write-Host "Real target path already exists: $real_target_path" -ForegroundColor "blue"
+}
 $startTime_writeIn = Get-Date
 Backup-WriteIn $source_path $target_path
 $endTime_writeIn = Get-Date
