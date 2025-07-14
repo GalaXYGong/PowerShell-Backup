@@ -279,9 +279,13 @@ Function Delete_if_Not_Exist {
     }
     return $false
 }
-# Load configuration from config.json
-# $configPath = "F:\coding\PS_backup\config.json"
+
+$configPath_self = Join-Path -Path $PSScriptRoot -ChildPath "config_self.json"
 $configPath = Join-Path -Path $PSScriptRoot -ChildPath "config.json"
+if (Test-Path $configPath_self) {
+    $configPath = $configPath_self
+}
+
 $config = Get-Content $configPath | ConvertFrom-Json
 
 $source_path = $config.source_path

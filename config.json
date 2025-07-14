@@ -1,8 +1,4 @@
 {
     "source_path": "F:\\backup_source",
-    "target_path": "F:\\backup_test",
-    "modified_root": "F:\\backup_modified",
-    "real_source_path": "F:\\backup_source",
-    "real_target_path": "F:\\backup_test",
-    "deleted_root": "F:\\backup_deleted"
+    "target_path": "F:\\backup_test"
 }
